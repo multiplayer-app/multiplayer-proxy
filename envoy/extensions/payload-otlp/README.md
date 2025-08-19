@@ -70,15 +70,61 @@ http_filters:
           "@type": type.googleapis.com/google.protobuf.StringValue
           value: |
             {
-              "otlp_collector_url": "http://otel-collector:4317"
+              "otlp_collector_url": "http://otel-collector:4318"
             }
 ```
 
 ### Configuration Parameters
 
-- `otlp_collector_url` (required): URL of the OTLP collector endpoint
-  - Example: `"http://otel-collector:4317"`
-  - Example: `"https://api.honeycomb.io:443"`
+The extension accepts a JSON configuration object with the following parameters:
+
+```json
+{
+  "otlp_collector_cluster_name": "otel-collector",
+  "otlp_collector_authority": "api.multiplayer.app",
+  "otlp_collector_path": "/v1/traces",
+  "otlp_collector_api_key": "your-api-key-here",
+  "capture_request_headers": true,
+  "capture_request_body": true,
+  "capture_response_headers": true,
+  "capture_response_body": true,
+  "max_body_size_bytes": 1048576,
+  "headers_to_include": ["content-type", "user-agent", "x-request-id"],
+  "headers_to_exclude": ["authorization", "cookie", "x-api-key"]
+}
+```
+
+#### Configuration Options
+
+- `otlp_collector_cluster_name` (required): Name of the Envoy cluster for the OTLP collector
+- `otlp_collector_authority` (required): Authority/hostname for the OTLP collector
+- `otlp_collector_path` (optional): Path for the OTLP traces endpoint
+- `otlp_collector_api_key` (optional): API key for authentication with the OTLP collector
+- `capture_request_headers` (optional, default: true): Whether to capture request headers
+- `capture_request_body` (optional, default: true): Whether to capture request body
+- `capture_response_headers` (optional, default: true): Whether to capture response headers
+- `capture_response_body` (optional, default: true): Whether to capture response body
+- `max_body_size_bytes` (optional, default: 1048576): Maximum body size to capture in bytes (1MB)
+- `headers_to_include` (optional): List of headers to always include in capture
+- `headers_to_exclude` (optional): List of headers to exclude from capture (for security)
+
+#### Example Configuration
+
+```json
+{
+  "otlp_collector_cluster_name": "otel-collector",
+  "otlp_collector_authority": "api.multiplayer.app",
+  "otlp_collector_path": "/v1/traces",
+  "otlp_collector_api_key": "eyJhbGciOiJ...4hnOOYvZT4HTYVUvvUtjI",
+  "capture_request_headers": true,
+  "capture_request_body": true,
+  "capture_response_headers": true,
+  "capture_response_body": true,
+  "max_body_size_bytes": 1048576,
+  "headers_to_include": ["content-type", "user-agent", "x-request-id"],
+  "headers_to_exclude": ["authorization", "cookie", "x-api-key"]
+}
+```
 
 ## Usage
 
@@ -113,7 +159,7 @@ The extension validates and captures bodies for these content types:
 
 ## Deployment
 
-Check for [example](./envoy-config.yaml) envoy proxy config
+Check for [example](../../envoy-config.yaml) envoy proxy config
 
 
 ## Span Attributes
