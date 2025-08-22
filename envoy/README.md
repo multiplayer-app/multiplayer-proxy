@@ -8,6 +8,7 @@ The Envoy proxy is configured to:
 - Listen on port 8080
 - Route requests with `/v1` prefix to a backend service
 - Capture request/response payloads using a custom WASM extension
+- Automatically mask sensitive data (passwords, tokens, headers) for security
 - Send telemetry data to an OTLP collector
 
 ## Prerequisites

@@ -26,6 +26,11 @@ This Envoy proxy extension captures HTTP request/response headers and body, and 
   - `multiplayer.http.request.body`
   - `multiplayer.http.response.body`
 
+- **Data Masking**: Automatically masks sensitive data in:
+  - Request/response headers (e.g., authorization, cookies)
+  - Request/response bodies (e.g., passwords, tokens, API keys)
+  - Configurable field lists for both headers and body content
+
 ## Building
 
 ### Prerequisites
@@ -107,6 +112,10 @@ The extension accepts a JSON configuration object with the following parameters:
 - `max_body_size_bytes` (optional, default: 1048576): Maximum body size to capture in bytes (1MB)
 - `headers_to_include` (optional): List of headers to always include in capture
 - `headers_to_exclude` (optional): List of headers to exclude from capture (for security)
+- `is_mask_body_enabled` (optional, default: true): Whether to enable masking of sensitive fields in request/response bodies
+- `is_mask_headers_enabled` (optional, default: true): Whether to enable masking of sensitive headers
+- `mask_body_fields_list` (optional): List of field names to mask in JSON bodies (uses default sensitive fields if not specified)
+- `mask_headers_list` (optional): List of header names to mask (uses default sensitive headers if not specified)
 
 #### Example Configuration
 
@@ -122,9 +131,39 @@ The extension accepts a JSON configuration object with the following parameters:
   "capture_response_body": true,
   "max_body_size_bytes": 1048576,
   "headers_to_include": ["content-type", "user-agent", "x-request-id"],
-  "headers_to_exclude": ["authorization", "cookie", "x-api-key"]
+  "headers_to_exclude": ["authorization", "cookie", "x-api-key"],
+  "is_mask_body_enabled": true,
+  "is_mask_headers_enabled": true,
+  "mask_body_fields_list": ["password", "token", "secret", "api_key"],
+  "mask_headers_list": ["authorization", "cookie", "set-cookie"]
 }
 ```
+
+## Data Masking
+
+The extension automatically masks sensitive data to protect privacy and security. By default, it masks common sensitive fields and headers.
+
+### Default Sensitive Fields (Body)
+
+The extension automatically masks these field names in JSON request/response bodies:
+- Authentication: `password`, `pass`, `passwd`, `pwd`, `token`, `access_token`, `refresh_token`, `secret`, `api_key`, `jwt`
+- Session: `session_id`, `sessionToken`, `auth_token`
+- Security: `client_secret`, `private_key`, `encryption_key`
+- Financial: `credit_card`, `card_number`, `cvv`, `cvc`, `ssn`, `pin`
+- Personal: `email`, `phone_number`, `address`, `dob`, `tax_id`, `passport_number`
+
+### Default Sensitive Headers
+
+The extension automatically masks these headers:
+- `authorization`, `cookie`, `set-cookie`, `proxyAuthorization`
+
+### Customizing Masking
+
+You can customize which fields and headers are masked using the configuration options:
+- `is_mask_body_enabled`: Enable/disable body masking
+- `is_mask_headers_enabled`: Enable/disable header masking  
+- `mask_body_fields_list`: Custom list of body fields to mask
+- `mask_headers_list`: Custom list of headers to mask
 
 ## Usage
 

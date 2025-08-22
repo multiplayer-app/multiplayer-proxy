@@ -6,6 +6,9 @@ use std::collections::HashMap;
 use std::time::Duration;
 use uuid::Uuid;
 
+mod mask;
+use mask::{MaskConfig, mask_headers, mask_body};
+
 proxy_wasm::main! {{
     proxy_wasm::set_log_level(LogLevel::Trace);
     proxy_wasm::set_root_context(|_| -> Box<dyn RootContext> { 
@@ -21,6 +24,7 @@ proxy_wasm::main! {{
             max_body_size_bytes: 1024 * 1024, // 1MB default
             headers_to_include: Vec::new(),
             headers_to_exclude: Vec::new(),
+            mask_config: MaskConfig::default(),
         }) 
     });
 }}
@@ -37,6 +41,7 @@ struct OtlpRoot {
     max_body_size_bytes: usize,
     headers_to_include: Vec<String>,
     headers_to_exclude: Vec<String>,
+    mask_config: MaskConfig,
 }
 
 impl Context for OtlpRoot {}
@@ -59,6 +64,7 @@ impl RootContext for OtlpRoot {
             max_body_size_bytes: self.max_body_size_bytes,
             headers_to_include: self.headers_to_include.clone(),
             headers_to_exclude: self.headers_to_exclude.clone(),
+            mask_config: self.mask_config.clone(),
             stored_trace_id: None,
             stored_span_id: None,
         }))
@@ -113,11 +119,28 @@ impl RootContext for OtlpRoot {
                         .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_lowercase())).collect())
                         .unwrap_or_default();
                     
+                    // Parse masking configuration
+                    self.mask_config.is_mask_body_enabled = config["is_mask_body_enabled"].as_bool().unwrap_or(true);
+                    self.mask_config.is_mask_headers_enabled = config["is_mask_headers_enabled"].as_bool().unwrap_or(true);
+                    
+                    self.mask_config.mask_body_fields_list = config["mask_body_fields_list"]
+                        .as_array()
+                        .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect())
+                        .unwrap_or_else(|| mask::SENSITIVE_FIELDS.iter().map(|s| s.to_string()).collect());
+                    
+                    self.mask_config.mask_headers_list = config["mask_headers_list"]
+                        .as_array()
+                        .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect())
+                        .unwrap_or_else(|| mask::SENSITIVE_HEADERS.iter().map(|s| s.to_string()).collect());
+                    
                     log(LogLevel::Info, &format!("Capture config: req_headers={}, req_body={}, resp_headers={}, resp_body={}, max_size={}bytes", 
                         self.capture_request_headers, self.capture_request_body, 
                         self.capture_response_headers, self.capture_response_body, self.max_body_size_bytes));
                     log(LogLevel::Info, &format!("Header filtering: include={:?}, exclude={:?}", 
                         self.headers_to_include, self.headers_to_exclude));
+                    log(LogLevel::Info, &format!("Masking config: body_enabled={}, headers_enabled={}, body_fields={:?}, header_fields={:?}", 
+                        self.mask_config.is_mask_body_enabled, self.mask_config.is_mask_headers_enabled,
+                        self.mask_config.mask_body_fields_list, self.mask_config.mask_headers_list));
                     
                     return true;
                 }
@@ -140,6 +163,7 @@ struct OtlpHttpContext {
     max_body_size_bytes: usize,
     headers_to_include: Vec<String>,
     headers_to_exclude: Vec<String>,
+    mask_config: MaskConfig,
     // Store trace context for reuse throughout request lifecycle
     stored_trace_id: Option<String>,
     stored_span_id: Option<String>,
@@ -402,14 +426,18 @@ impl OtlpHttpContext {
             let start_time = end_time;
             let duration = 0;
 
-            let request_headers: HashMap<String, String> = self
+            let request_headers: Vec<(String, String)> = self
                 .get_http_request_headers()
                 .into_iter()
                 .filter(|(k, _)| self.should_include_header(k))
                 .collect();
 
+            // Apply masking to headers
+            let masked_headers = mask_headers(&request_headers, &self.mask_config);
+            let request_headers_map: HashMap<String, String> = masked_headers.into_iter().collect();
+
             let mut attributes = HashMap::new();
-            attributes.insert("multiplayer.http.request.headers".to_string(), serde_json::to_string(&request_headers).unwrap_or_default());
+            attributes.insert("multiplayer.http.request.headers".to_string(), serde_json::to_string(&request_headers_map).unwrap_or_default());
 
             let span_data = self.create_span_data(
                 &trace_id,
@@ -440,7 +468,9 @@ impl OtlpHttpContext {
             let duration = 0;
 
             let mut attributes = HashMap::new();
-            attributes.insert("multiplayer.http.request.body".to_string(), request_body.to_string());
+            // Apply masking to body
+            let masked_body = mask_body(request_body, &self.mask_config);
+            attributes.insert("multiplayer.http.request.body".to_string(), masked_body);
 
             let span_data = self.create_span_data(
                 &trace_id,
@@ -470,16 +500,20 @@ impl OtlpHttpContext {
             let start_time = end_time;
             let duration = 0;
 
-            let response_headers: HashMap<String, String> = self
+            let response_headers: Vec<(String, String)> = self
                 .get_http_response_headers()
                 .into_iter()
                 .filter(|(k, _)| self.should_include_header(k))
                 .collect();
 
+            // Apply masking to headers
+            let masked_headers = mask_headers(&response_headers, &self.mask_config);
+            let response_headers_map: HashMap<String, String> = masked_headers.into_iter().collect();
+
             let mut attributes = HashMap::new();
             attributes.insert(
                 "multiplayer.http.response.headers".to_string(),
-                serde_json::to_string(&response_headers).unwrap_or_default()
+                serde_json::to_string(&response_headers_map).unwrap_or_default()
             );
 
             let span_data = self.create_span_data(
@@ -511,7 +545,9 @@ impl OtlpHttpContext {
             let duration = 0;
 
             let mut attributes = HashMap::new();
-            attributes.insert("multiplayer.http.response.body".to_string(), response_body.to_string());
+            // Apply masking to body
+            let masked_body = mask_body(response_body, &self.mask_config);
+            attributes.insert("multiplayer.http.response.body".to_string(), masked_body);
 
             let span_data = self.create_span_data(
                 &trace_id,
