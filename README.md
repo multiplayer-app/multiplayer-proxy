@@ -26,10 +26,15 @@
   </p>
 </div>
 
+# Multiplayer Proxy
 
-## Default configuration:
+The Multiplayer Proxy captures request, response and header data for Multiplayer Full Stack Session Recordings.
 
-Default [Envoy proxy configuration file](./envoy/envoy-config.yaml) has following settings:
+It's built on [Envoy Proxy](https://www.envoyproxy.io/) with an [WASM extension](./envoy/extensions/payload-otlp/).
+
+## Example Configuration
+
+An example [Envoy proxy configuration file](./envoy/envoy-config.yaml) in this repository has the following settings. Update as required for your project.
 
 - Listen on port 8080
 - Route requests with `/v1` prefix to a backend service
@@ -37,6 +42,8 @@ Default [Envoy proxy configuration file](./envoy/envoy-config.yaml) has followin
 - Send telemetry data to Multiplayer OTLP collector
 
 ## Extension configuration
+
+
 
 The extension accepts a JSON configuration object with the following parameters:
 
@@ -56,12 +63,14 @@ The extension accepts a JSON configuration object with the following parameters:
 }
 ```
 
-Configuration for extension should be passed to envoy proxy [configuration](./envoy/envoy-config.yaml)
+Configuration for extension should be passed to envoy proxy [configuration](./envoy/envoy-config.yaml) (line 38).
+
+For more details about configuring extension and masking rules see the [Multiplayer Proxy Extension](./envoy/extensions/payload-otlp/README.md)
 
 
-## Deployment
+## Example Deployments
 
-### Ingress proxy:
+### Edge proxy
 
 Route all your traffic through envoy proxy (docker compose example):
 
@@ -81,6 +90,14 @@ services:
 
 To start it, run: `docker compose up -d`
 
+### Service proxy
+
+### Embeded
+
+### Sidecar
+
+
+
 ## License
 
-MIT — see [LICENSE](https://github.com/multiplayer-app/multiplayer-session-recorder-javascript/blob/main/LICENSE).
+MIT — see [LICENSE](./LICENSE).

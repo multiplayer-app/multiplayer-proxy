@@ -1,6 +1,7 @@
-# Envoy OTLP Extension
+# Multiplayer Proxy Extension
 
-This Envoy proxy extension captures HTTP request/response headers and body, and creates OpenTelemetry (OTLP) spans when OTLP-compatible headers are detected in incoming requests.
+The Multiplayer Proxy Extension (WASM) captures request, response and header data for Multiplayer Full Stack Session Recordings.
+The extension creates OpenTelemetry (OTLP) spans when OTLP-compatible headers are detected in requests and responses.
 
 ## Features
 
@@ -124,7 +125,7 @@ The extension accepts a JSON configuration object with the following parameters:
   "otlp_collector_cluster_name": "otel-collector",
   "otlp_collector_authority": "api.multiplayer.app",
   "otlp_collector_path": "/v1/traces",
-  "otlp_collector_api_key": "eyJhbGciOiJ...4hnOOYvZT4HTYVUvvUtjI",
+  "otlp_collector_api_key": "{{YOUR_MULTIPLAYER_API_KEY}}",
   "capture_request_headers": true,
   "capture_request_body": true,
   "capture_response_headers": true,
@@ -173,17 +174,17 @@ The extension will create spans when it detects any of these headers:
 
 #### W3C Trace Context
 ```
-traceparent: 00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01
+traceparent: 00-debdeb1916cd43dd8448eb211c80319c-b7ad6b7169203331-01
 ```
 
 #### Zipkin B3
 ```
-b3: 0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-1
+b3: debdeb1916cd43dd8448eb211c80319c-b7ad6b7169203331-1
 ```
 
 #### Custom Headers
 ```
-x-trace-id: 0af7651916cd43dd8448eb211c80319c
+x-trace-id: debdeb1916cd43dd8448eb211c80319c
 x-span-id: b7ad6b7169203331
 ```
 
@@ -216,22 +217,3 @@ Each span created by the extension includes:
 - **Trace Context**:
   - `multiplayer.http.proxy`: Indicates that span was created by proxy
   - `multiplayer.http.proxy.type`: Proxy type
-
-### Example Span
-
-```json
-{
-  "name": "envoy_proxy_request",
-  "trace_id": "0af7651916cd43dd8448eb211c80319c",
-  "span_id": "new_span_id_here",
-  "parent_span_id": "b7ad6b7169203331",
-  "attributes": {
-    "multiplayer.http.request.headers": "{\"content-type\": \"application/json\", \"traceparent\": \"00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01\"}",
-    "multiplayer.http.request.body": "{\"key\": \"value\"}",
-    "multiplayer.http.response.headers": "{\"content-type\": \"application/json\", \"content-length\": \"25\"}",
-    "multiplayer.http.response.body": "{\"status\": \"success\"}",
-    "envoy.trace_id": "0af7651916cd43dd8448eb211c80319c",
-    "envoy.span_id": "b7ad6b7169203331"
-  }
-}
-```
