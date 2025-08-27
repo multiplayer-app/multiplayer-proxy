@@ -45,7 +45,3 @@ From the `envoy` directory, start the docker-compose services:
 ```bash
 docker-compose up
 ```
-
-## License
-
-MIT — see [LICENSE](https://github.com/multiplayer-app/multiplayer-session-recorder-javascript/blob/main/LICENSE).

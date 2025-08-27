@@ -80,3 +80,7 @@ services:
 ```
 
 To start it, run: `docker compose up -d`
+
+## License
+
+MIT — see [LICENSE](https://github.com/multiplayer-app/multiplayer-session-recorder-javascript/blob/main/LICENSE).
