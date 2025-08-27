@@ -1,4 +1,4 @@
-![Description](.github/header-proxy.png)
+![Description](./docs/img/header-proxy.png)
 
 <div align="center">
 <a href="https://github.com/multiplayer-app/multiplayer-proxy">
@@ -26,51 +26,57 @@
   </p>
 </div>
 
-# Envoy Proxy
 
-This directory contains an Envoy proxy setup with custom WASM extensions for OTLP (OpenTelemetry Protocol) payload capture.
+## Default configuration:
 
-## Overview
-
-The Envoy proxy is configured to:
+Default [Envoy proxy configuration file](./envoy/envoy-config.yaml) has following settings:
 
 - Listen on port 8080
 - Route requests with `/v1` prefix to a backend service
 - Capture request/response payloads using a custom WASM extension
-- Send telemetry data to an OTLP collector
+- Send telemetry data to Multiplayer OTLP collector
 
-## Prerequisites
+## Extension configuration
 
-Before starting the docker-compose setup, ensure you have:
+The extension accepts a JSON configuration object with the following parameters:
 
-1. **Docker and Docker Compose** installed on your system
-
-## Quick Start
-
-### 1. Build the WASM Extension or use prebuilt one
-
-To build wasm extension from source:
-
-```bash
-cd extensions/payload-otlp
-./build.sh
+```json
+{
+  "otlp_collector_cluster_name": "otel-collector",
+  "otlp_collector_authority": "api.multiplayer.app",
+  "otlp_collector_path": "/v1/traces",
+  "otlp_collector_api_key": "your-api-key-here",
+  "capture_request_headers": true,
+  "capture_request_body": true,
+  "capture_response_headers": true,
+  "capture_response_body": true,
+  "max_body_size_bytes": 1048576,
+  "headers_to_include": ["content-type", "user-agent", "x-request-id"],
+  "headers_to_exclude": ["authorization", "cookie", "x-api-key"]
+}
 ```
 
-This script will:
+Configuration for extension should be passed to envoy proxy [configuration](./envoy/envoy-config.yaml)
 
-- Check for Rust installation
-- Install the appropriate WASM target for your OS
-- Build the OTLP capture payload extension
-- Output the WASM file to `build/otlp_capture_payload.wasm`
 
-### 2. Set OTLP key
+## Deployment
 
-**Important**: You also need to update the `MULTIPLAYER_OTLP_KEY` placeholder in the Envoy configuration file. Open [envoy-config.yaml](./envoy-config.yaml) and replace `{{MULTIPLAYER_OTLP_KEY}}` with your actual API key value.
+### Ingress proxy:
 
-### 3. Start the Services
+Route all your traffic through envoy proxy (docker compose example):
 
-From the `envoy` directory, start the docker-compose services:
+```yaml
+version: '3.8'
 
-```bash
-docker-compose up
+services:
+  envoy:
+    build:
+      context: ./envoy
+    container_name: envoy
+    environment:
+      - MULTIPLAYER_OTLP_KEY="{{YOUR_BACKEND_OTEL_TOKEN}}"
+    ports:
+      - "8080:8080"
 ```
+
+To start it, run: `docker compose up -d`

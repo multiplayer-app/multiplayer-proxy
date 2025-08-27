@@ -31,15 +31,15 @@ static_resources:
                           runtime: "envoy.wasm.runtime.v8"
                           code:
                             local:
-                              filename: "/etc/istio/extensions/otlp_capture_payload.wasm"
+                              filename: "/etc/envoy/extensions/otlp_capture_payload.wasm"
                         configuration:
                           "@type": type.googleapis.com/google.protobuf.StringValue
                           value: |
                             {
                               "otlp_collector_cluster_name": "otel-collector",
-                              "otlp_collector_authority": "api.multiplayer.app",
+                              "otlp_collector_authority": "otlp.multiplayer.app",
                               "otlp_collector_path": "/v1/traces",
-                              "otlp_collector_api_key": "{{MULTIPLAYER_OTLP_KEY}}",
+                              "otlp_collector_api_key": "${MULTIPLAYER_OTLP_KEY:-}",
                               "capture_request_headers": true,
                               "capture_request_body": true,
                               "capture_response_headers": true,
@@ -73,7 +73,7 @@ static_resources:
         name: envoy.transport_sockets.tls
         typed_config:
           "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
-          sni: api.multiplayer.app
+          sni: otlp.multiplayer.app
       load_assignment:
         cluster_name: otel-collector
         endpoints:
@@ -81,5 +81,5 @@ static_resources:
           - endpoint:
               address:
                 socket_address:
-                  address: api.multiplayer.app
+                  address: otlp.multiplayer.app
                   port_value: 443

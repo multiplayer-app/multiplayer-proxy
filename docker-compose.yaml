@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  envoy:
+    build:
+      context: ./envoy
+    container_name: envoy
+    environment:
+      - MULTIPLAYER_OTLP_KEY="{{YOUR_BACKEND_OTEL_TOKEN}}"
+    ports:
+      - "8080:8080"
